@@ -1,11 +1,11 @@
 const { Sequelize } = require('sequelize');
 const {
-  DB_USER, DB_PASSWORD, DBHOST,
+  DB_USER, DB_PASSWORD, DBHOST, DBNAME 
 } = process.env;
 const {pokemon} = require ('./models/pokemon')
 const types = require ('./models/types')
 
-const sequelize = new Sequelize(`postgres://${DB_USER}:${DB_PASSWORD}@${DBHOST}/pokemon_database`, {
+const sequelize = new Sequelize(`postgres://${DB_USER}:${DB_PASSWORD}@${DBHOST}/${DBNAME}`, {
   logging: false,
   native: false
 });
