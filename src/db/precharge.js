@@ -195,7 +195,7 @@ const createdPokes=[
         "name": "22",
         "types": [ "ghost" ],
         "images": {
-            "icon": "https://www.disneyclips.com/images5/images/soul-222.png",
+            "icon": "https://i.ibb.co/LQB1gpg/soul-22.png",
             "front": "https://vkclub.su/_data/stickers/soul22/sticker_vk_soul22_022.png",
             "backIcon": ""
         },
