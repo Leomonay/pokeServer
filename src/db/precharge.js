@@ -6,7 +6,7 @@ const createdPokes=[
     //     "types": [ "bug", "psychic" ],
     //     "images": {
     //         "icon": "https://pa1.narvii.com/6467/6eeaaf30234f850eb234cbdafcaa936cdbfa807c_hq.gif",
-    //         "front": "https://www.pngall.com/wp-content/uploads/9/Pinocchio-Jiminy-Cricket-PNG-Free-Download.png",
+    //         "front": "https://i.pinimg.com/originals/25/d6/69/25d66915e7647b64a86198be5b89539e.png",
     //         "backIcon": "https://2img.net/r/ihimizer/img197/8240/pinocho20.gif"
     //     },
     //     "stats": {

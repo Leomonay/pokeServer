@@ -14,7 +14,7 @@ server.use(cors())
 server.use('/', routes)
 
 async function startServer(){
-await conn.sync({ force: true })
+await conn.sync({ force: process.env.SYNC })
 server.listen(PORT, () => {
         console.log(`Server listening at at ${HOST}:${PORT}`)
     })
