@@ -1,14 +1,16 @@
 const express = require('express')
 require('dotenv').config()
 const server = express()
+const morgan = require('morgan');
 const { conn } = require('./src/db/db');
 const routes = require('./src/routes/index')
-const {HOST,PORT} = process.env
-const {getTypes} = require('./src/controllers/typeController')
 const cors = require('cors')
 
+const {HOST,PORT} = process.env
+const {getTypes} = require('./src/controllers/typeController')
 const {precharge} = require('./src/db/precharge')
 
+server.use(morgan('dev'));
 server.use(express.json())
 server.use(cors())
 server.use('/', routes)
