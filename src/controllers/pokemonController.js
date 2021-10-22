@@ -24,9 +24,9 @@ async function getPokemonList(req,res){
                 base?
                     response = await Pokemon.findOne({where:{ id_pokemon: 'A'+index},include: Type})
                     : response = await axios(`${API}${POKE}${index}`)
-                    console.log(base?response:response.data)
             if(response){
                 const poke={
+                    id: base? response.id_pokemon : response.data.id,
                     name: base? response.name : response.data.species.name,
                     imageIcon: base? response.imageIcon: response.data.sprites['front_default'], 
                     types: base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name),
@@ -163,7 +163,7 @@ async function getTotalQuantity(){
     }
 
     let local = ( await Pokemon.findAll() ).length
-    totalPokemon = {api: sum, created: local}
+    totalPokemon = {api: sum, server: local}
     console.log('totals', totalPokemon)
 }
 getTotalQuantity()
