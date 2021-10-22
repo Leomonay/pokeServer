@@ -15,28 +15,35 @@ async function getPokemonList(req,res){
     let initial = parseInt(req.query.start) || 1
     let limit = parseInt(req.query.limit) || 12
     for (let i=initial; i<=limit; i++)indexes.push(i)
-    let pokeData=[]
     let base = req.query.base || null
 
     try{
+        let pokeData=[]
         for await (let index of indexes){
             let response ={}
                 base?
                     response = await Pokemon.findOne({where:{ id_pokemon: 'A'+index},include: Type})
                     : response = await axios(`${API}${POKE}${index}`)
-            const poke={
-                name: base? response.name : response.data.species.name,
-                imageIcon: base? response.imageIcon: response.data.sprites['front_default'], 
-                types: base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name),
-                bigImage: base? response.imageFront : `${IMAGE3D}${response.data.species.name}.png` 
+                    console.log(base?response:response.data)
+            if(response){
+                const poke={
+                    name: base? response.name : response.data.species.name,
+                    imageIcon: base? response.imageIcon: response.data.sprites['front_default'], 
+                    types: base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name),
+                    bigImage: base? response.imageFront : `${IMAGE3D}${response.data.species.name}.png` 
+                }
+                pokeData.push(poke)
             }
-            pokeData.push(poke)
+        }
+        if(pokeData.length>0){
+            res.status(200).send(pokeData)
+        }else{
+            res.status(404).send({error: 'No Pokemon in Range'})
         }
     }catch(e){
-        console.error(e.message)
+        console.error(e)
         res.status(400).send({error: e.message})
     }
-    res.status(200).send(pokeData)
 }
 
 async function getPokemon(req, res){
