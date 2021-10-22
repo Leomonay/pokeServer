@@ -27,7 +27,8 @@ async function getPokemonList(req,res){
             const poke={
                 name: base? response.name : response.data.species.name,
                 imageIcon: base? response.imageIcon: response.data.sprites['front_default'], 
-                types: base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name)
+                types: base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name),
+                bigImage: base? response.imageFront : `${IMAGE3D}${response.data.species.name}.png` 
             }
             pokeData.push(poke)
         }
