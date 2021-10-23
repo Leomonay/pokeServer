@@ -8,7 +8,7 @@ const cors = require('cors')
 
 const {HOST,PORT} = process.env
 const {getTypes} = require('./src/controllers/typeController')
-const {precharge} = require('./src/db/precharge')
+const {precharge} = require('./src/db/precharge');
 
 server.use(morgan('dev'));
 server.use(express.json())
@@ -34,6 +34,7 @@ try{
         precharge();
     })()
     console.log('Types successfully loaded')
+
 } catch (error) {
     console.error('Unable to load types', error);
 }

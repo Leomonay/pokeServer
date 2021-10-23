@@ -3,83 +3,84 @@ const axios = require ('axios')
 const {Op} = require ('sequelize')
 const {API, IMAGE3D, POKE} = process.env
 
+const info = {list:'To List', card:'To Card', detail:'To Detail'}
 let totalPokemon ={}
 
 async function getTotalPokemon(req, res){
     res.status(200).send(totalPokemon)
 }
 
+async function BuildPokemon(response,database,data){
+    let poke={}
+    base=database==='server'
+
+    if(data!==info.list) poke.id=base? response.id_pokemon : response.data.id
+
+    poke.name= base? response.name.toUpperCase() : response.data.species.name.toUpperCase()
+    poke.types= base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name)
+    poke.imageIcon= base? response.imageIcon : response.data.sprites['front_default']
+
+    if(data!==info.detail)poke.bigImage= base? response.imageFront : `${IMAGE3D}${response.data.species.name}.png` 
+
+    if(data===info.detail){
+        poke.imageFront= base? response.imageFront : response.data.sprites.other['official-artwork']['front_default']        
+        poke.imageBack= base? response.imageBack : response.data.sprites['back_default']
+        poke.stats= base?[
+            {name: "Height", value: response.height/100+'m.'},
+            {name: "Weight", value: response.weight+'kg.'},
+            {name: "Health Points", value: response.hp},
+            {name: "Attack", value: response.attack},
+            {name: "Special attack", value: response['special-attack']},
+            {name: "Speed", value: response.speed},
+            {name: "Defense", value: response.defense},
+            {name: "Special defense", value: response['special-defense']}
+        ]
+        : response.data.stats.map(e =>{
+            return{name: e.stat.name[0].toUpperCase()+e.stat.name.slice(1).replace("-"," "), value : e.base_stat}
+        })
+        if(!poke.stats.filter(e=>e.name=="Height")[0]){
+                poke.stats.unshift(
+                    {name: "Height", value: response.data.height*10+'m.'},
+                    {name: "Weight", value: response.data.weight/10+'kg.'})
+            }
+    }
+    return(poke)
+}
+
+
 async function getList(init, final, base){
     let pokeCollection = []
-    let indexes = []   
+    let indexes = []
+   
     for(let i = init; i<=final; i++)indexes.push(i)
     try{
-        if (base==='server'){
-            console.log(base,indexes)
-            for await (let index of indexes){
-                if(index<=totalPokemon[base]){
-                    const response = await Pokemon.findOne({where:{ id_pokemon: 'A'+index},include: Type})
-                    const poke ={
-                        name: response.name,
-                        imageIcon: response.imageIcon, 
-                        types: response.types.map(e=>e.name),
-                        bigImage: response.imageFront
-                    }
-                    pokeCollection.push(poke)
-                }            
+        let search = []
+        for (let index= init; index<=final;index++){
+            if(index<=totalPokemon[base]){
+                //set inmutable id
+                const id = index
+                //create Promise in respective database
+                search[index-init] = (base==='server' ?
+                    Pokemon.findOne({where:{ id_pokemon: 'A'+id},include: Type})
+                    : axios(`${API}${POKE}${id}`)
+                    )
+                //apply BuildPokemon
+                .then(response=> BuildPokemon(response,base,info.list))
+                //push into array
+                .then(response=>pokeCollection.push({'index':index,'pokemon': response}))
             }
-            return(pokeCollection)
-        }else{
-            let search = []
-            for (let index= init; index<=final;index++){
-                if(index<=totalPokemon[base]){
-                    const id = index
-                    console.log(`${API}${POKE}${id}`)
-                    search[index-init] = axios(`${API}${POKE}${id}`)
-                    .then(response=>{
-                        const poke ={
-                            index:index,
-                            name: response.data.species.name,
-                            imageIcon: response.data.sprites['front_default'], 
-                            types: response.data.types.map(e=>e.type.name),
-                            bigImage: `${IMAGE3D}${response.data.species.name}.png` 
-                        }
-                        pokeCollection.push(poke)
-                    })
-                }else{
-                    colLength= (index-1)-init+1
-                }  
-            }
-            await Promise.all(search)
-            return pokeCollection.sort((a,b)=>a.index-b.index)
-
         }
+        //promise all
+        await Promise.all(search)
+        //sort array
+        pokeCollection.sort((a,b)=>a.index-b.index)
+        //sort delete index
+        pokeCollection.map(poke=>delete poke.index)
+        //send just pokemon
+        return pokeCollection.map(e=>e.pokemon)
     }catch(e){
         console.log(e.message)
         throw new Error(e.message)
-    }
-}
-
-async function getPokemonList(req,res){
-    if (req.query.name){
-        try{
-            const poke= await getPokemonByName(req.query.name)
-            res.status(200).send(poke)
-        }catch(e){
-            console.error(e)
-            res.status(404).send({error: 'Pokemon not found. Try another name'})
-        }
-    }else{
-        try{
-            base=req.query.base || 'api'
-            let initial = req.query.initial || 1
-            let final = req.query.final || 12
-            const pokemonCollection = await getList(initial, final, base)
-            res.status(200).send(pokemonCollection)
-        }catch(e){
-            console.log(e.message)
-            res.status(404).send({error: 'No Pokemon found'})
-        }
     }
 }
 
@@ -93,12 +94,9 @@ async function getPokemonByName(pokeName){
             response = await axios(`${API}${POKE}${pokeName}`)
         }
         if(!response) throw new Error({error: 'Pokemon not found. Try a valid name'})
-        const poke={}
-            poke.id = base? response.id_pokemon : response.data.id
-            poke.name = base? response.name.toUpperCase() : response.data.species.name.toUpperCase()
-            poke.imageIcon = base? response.imageIcon : response.data.sprites['front_default']
-            poke.bigImage = base? response.imageFront : `${IMAGE3D}${response.data.species.name}.png` 
-            poke.types = base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name)
+
+        const poke = BuildPokemon(response,base,info.card)
+
         return(poke)
     }catch(e){
         console.error(e.message)
@@ -123,33 +121,7 @@ async function getPokemonById(req, res){
         if(!response){
             res.status(404).send({error: 'Pokemon not Found'})
         }else{
-            //si hay respuesta, construye el pokemon por id.
-            poke.id=base? response.id_pokemon : response.data.id
-            poke.name= base? response.name.toUpperCase() : response.data.species.name.toUpperCase()
-            poke.imageFront= base? response.imageFront : response.data.sprites.other['official-artwork']['front_default']        
-            poke.imageBack= base? response.imageBack : response.data.sprites['back_default']
-            poke.imageIcon= base? response.imageIcon : response.data.sprites['front_default']
-            poke.bigImage= base? response.imageFront : `${IMAGE3D}${response.data.species.name}.png` 
-            poke.types= base? response.types.map(e=>e.name) : response.data.types.map(e=>e.type.name)
-            poke.stats= base?
-                [
-                    {name: "Height", value: response.height/100+'m.'},
-                    {name: "Weight", value: response.weight+'kg.'},
-                    {name: "Health Points", value: response.hp},
-                    {name: "Attack", value: response.attack},
-                    {name: "Special attack", value: response['special-attack']},
-                    {name: "Speed", value: response.speed},
-                    {name: "Defense", value: response.defense},
-                    {name: "Special defense", value: response['special-defense']}
-                ]
-                : response.data.stats.map(e => {
-                    return {name: e.stat.name[0].toUpperCase()+e.stat.name.slice(1).replace("-"," "), value : e.base_stat}
-                    })
-                if(!poke.stats.filter(e=>e.name=="Height")[0]){
-                    poke.stats.unshift(
-                        {name: "Height", value: response.data.height*10+'m.'},
-                        {name: "Weight", value: response.data.weight/10+'kg.'})
-                }
+            poke = await BuildPokemon(response,base,info.detail)
             res.status(200).send(poke)
         }
     }catch(e){
@@ -183,7 +155,7 @@ async function createPokemon(req,res){
     try{
         const checkName = await Pokemon.findOne({where:{name: name}})
         if (checkName){
-            res.status(400).send({error: 'Name', detail:'This pokemon name already exists. Try another'})
+            res.status(400).send({error: {Name: 'This pokemon name already exists. Try another'}})
         }else{
             const id = ( await Pokemon.findAll() ).length+1
             const pokemon = await Pokemon.create({
@@ -207,11 +179,16 @@ async function createPokemon(req,res){
             });
             
             await pokemon.setTypes(dbTypes);
+            const newPokemon = await Pokemon.findOne( { where: {name: name},include: Type})
 
             res.status(200).send({
                 message: 'pokemon created successfully',
-                id: 'A'+id,
-                pokemon: await Pokemon.findOne( { where: {name: name} } )
+                pokemon: {
+                    id: newPokemon.id_pokemon,
+                    name: newPokemon.name,
+                    imageIcon: newPokemon.imageIcon,
+                    types: newPokemon.types.map(e=>e.name)
+                }
             } )
         }
     }catch(e){
@@ -240,7 +217,6 @@ async function getTotalQuantity(){
             }
         }
     }
-
     let local = ( await Pokemon.findAll() ).length
     totalPokemon = {api: sum, server: local}
     console.log('totals', totalPokemon)
